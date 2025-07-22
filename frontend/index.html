@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Image Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 AI Image Analyzer</h1>
+    
+    <form id="uploadForm" enctype="multipart/form-data" autocomplete="off">
+      <input type="file" id="imageInput" name="image" accept="image/*" required />
+      <button type="submit" id="submitBtn">Analyze Image</button>
+    </form>
+
+    <div id="preview">
+      <img id="previewImg" style="display: none;" />
+    </div>
+
+    <div id="result">
+      <h3>📝 Description:</h3>
+      <p id="captionText">Upload an image to get started.</p>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById('uploadForm');
+    const imageInput = document.getElementById('imageInput');
+    const previewImg = document.getElementById('previewImg');
+    const captionText = document.getElementById('captionText');
+    const submitBtn = document.getElementById('submitBtn');
+  
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (file) {
+        previewImg.src = URL.createObjectURL(file);
+        previewImg.style.display = 'block';
+        captionText.textContent = '✅ Ready to analyze!';
+      } else {
+        previewImg.style.display = 'none';
+        captionText.textContent = 'Upload an image to get started.';
+      }
+    });
+  
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const file = imageInput.files[0];
+      if (!file) {
+        captionText.textContent = '❗ Please select an image.';
+        return;
+      }
+  
+      const formData = new FormData();
+      formData.append("image", file);
+  
+      // Set loading state
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Analyzing...';
+      captionText.textContent = "⏳ Analyzing image...";
+  
+      try {
+        const res = await fetch("/analyze", {
+          method: "POST",
+          body: formData,
+        });
+  
+        let data;
+  
+        if (!res.ok) {
+          let errorMessage = `HTTP ${res.status}`;
+          try {
+            const err = await res.json();
+            errorMessage = err.error || errorMessage;
+          } catch (_) {
+            // Not JSON
+          }
+          throw new Error(errorMessage);
+        }
+  
+        try {
+          data = await res.json();
+        } catch (_) {
+          throw new Error("⚠️ Invalid JSON response from server.");
+        }
+  
+        captionText.textContent = data.caption || "🤔 No tags found.";
+      } catch (error) {
+        console.error("Fetch error:", error);
+        captionText.textContent = `❌ Error: ${error.message}`;
+      } finally {
+        // Reset button
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Analyze Image';
+      }
+    });
+  </script>
+  
+</body>
+</html>
